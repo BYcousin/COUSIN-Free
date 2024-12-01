@@ -1,0 +1,11 @@
+#make dir
+cd $HOME/COUSIN-Free
+
+rm -rf setup
+
+
+#permission excute
+chmod +x CN COUSIN_V2 COUSIN_V4 COUSIN_V5 COUSIN_V11 COUSIN_V12 COUSIN_V13 COUSIN_V14 repak repack unpack unobb.bms reobb.bms unlock unpack repack repack.bms unpack.bms
+
+#run
+./CN
