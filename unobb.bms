@@ -1,3 +1,4 @@
+
 get fsize asize 
 comtype zstd
 math folder_count = 0
@@ -80,33 +81,33 @@ startfunction getdata
 			get magic_files long toc_first_chunk
 			#string ext = ""
 			callfunction guest_extension 1
-			
-			if b3 > 4
+		
+		    if b3 > 4		
 			     if uasset == 0
 				    goto -0x4 toc_end_chunk
 				    get magic_files threebyte toc_end_chunk
 				    if magic_files == 0x2a83c1 #"\xc1\x83\x2a"
-					   #string ext = ".uexp"
+				       #string ext = ".uexp"
 					   math uasset = 2
-				    else
+			        else
 				       #string ext = ".ubulk"
-					   math uasset = 3
+				       math uasset = 3
 				    endif
-			     endif
-			else
-			    if uasset == 0
-				    goto -0x2 toc_end_chunk
-				    get magic_files short toc_end_chunk
-				    if magic_files == 0x9e2a #"\x2a\x9e"
-					   #string ext = ".uexp"
-					   math uasset = 2
-				    else
-				       #string ext = ".ubulk"
-					   math uasset = 3
-				    endif
-			     endif
+			    endif
+	        else 
+		    if uasset == 0
+		       goto -0x2 toc_end_chunk
+		       get magic_files short toc_end_chunk
+		       if magic_files == 0x9e2a #"\x2a\x9e"
+		           #string ext = ".uexp"
+		           math uasset = 2
+		       else
+		          #string ext =".ubluk"
+		          math uasset = 3
+		       endif
 		    endif
-		else 
+		endif
+	else	    
 		    getarray b1 0 0 
 			getarray b2 1 0
 			getarray b3 2 0
@@ -217,19 +218,18 @@ startfunction getoffset
 endfunction
 
 startfunction resolver
-	if counted == "\x74\x75\x6E\x62\x75\x64\x69\x30\x36\x61\x64\x61\x6C\x61\x68\x64\x65\x76\x65\x6C\x6F\x70\x65\x72\x74\x65\x72\x6B\x61\x79\x61\x6E\x74\x65\x72\x62\x61\x69\x6B"
 		#print "%counted% 1"
 		math b2 = id1
 		math b1 = id2
 		math b3 = id3
 		math b4 = id5
-	elif counted == "\x64\x66\x64\x73\x79\x68\x73\x62\x65\x66\x67\x73\x76\x78\x72\x36\x73\x6E\x78\x34\x37\x79\x6B\x6D\x78\x77\x77\x35\x6B\x36\x65\x6A\x63\x68\x36\x64\x62\x63\x74\x67"
+	else
 		##print "%counted% 2"
 		math b1 = id
 		math b2 = id3
 		math b3 = id5
 		math b4 = id1
-	elif counted == "\x61\x6B\x75\x20\x73\x61\x79\x61\x6E\x67\x20\x6B\x61\x6D\x75"
+	else
 		#print "%counted% 3"
 		math b1 = id2
 		math b2 = id
@@ -266,7 +266,6 @@ startfunction getname
 	#string name += . #for auto guest extension
 	#disable bcz we need to specify  the file
 endfunction
-
 
 
 
@@ -326,5 +325,3 @@ startfunction getinfo
 	  math id2 = id10
 	  math id3 = id
 endfunction 
-
-
