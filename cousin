@@ -1,0 +1,12 @@
+#make dir
+cd $HOME/COUSIN-Free
+
+rm -rf setup
+
+
+#permission excute
+chmod +x 90FPS repak OBB CN PAKS repackchunk unpack repack SKIN MAP unlock
+chmod +x script/unpack.bms
+chmod +x script/repack.bms
+#run
+./CN
