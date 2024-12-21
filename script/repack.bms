@@ -1,0 +1,257 @@
+get fsize asize 
+comtype zstd
+math folder_count = 0
+math runtimed = 0
+math skipped_filecount = 0
+#put array dec 
+#0 for coffset
+#1 for czipsize
+#2 for csize
+#3 chunks
+#4 tmp_chunks
+#offset adalah lokasi read compression
+#memoffset adalah offset next buat guest zipsize
+
+math fixedsize = 65536
+
+callfunction getdata 1
+
+startfunction getdata 
+	for i = 0 < fsize
+		math runtimed = i
+		callfunction getname 1
+		label skipped_file
+		math chunks = 0 
+		
+		#wee need some to guest the size chunks offset and some another gueest
+		do 
+			callfunction getoffset 1
+			goto offset
+			callfunction getinfo 1
+			putarray 0 chunks coffset #czipsize csize
+			putarray 1 chunks czipsize
+			putarray 2 chunks csize
+			if chunks == 0 
+				math tmp_chunks = csize
+			else 
+				math tmp_chunks += csize 
+			endif
+			if csize == fixedsize
+				math chunks += 1 # before end of while to know the chunks
+			endif
+		while csize == fixedsize
+		
+		math uasset = 0 # 1 uasset 2 uexp 3 ubulk 4 lua 5 dat 6 res 7 bin 8 bnk
+		if chunks > 0
+			#guest for first file 
+			getarray coffset 0 0 
+			getarray czipsize 1 0
+			getarray csize 2 0
+			clog MEMORY_FILE5 coffset czipsize csize
+			math toc_first_chunk = -5
+			
+			getarray coffset 0 chunks 
+			getarray czipsize 1 chunks
+			getarray csize 2 chunks
+			clog MEMORY_FILE10 coffset czipsize csize
+			math toc_end_chunk = -5 
+			
+			goto 0 toc_first_chunk
+			get magic_files long toc_first_chunk
+			#string ext = ""
+			callfunction guest_extension 1
+			
+			if uasset == 0
+				goto -0x4 toc_end_chunk
+				get magic_files threebyte toc_end_chunk
+				if magic_files == 0x2a83c1 #"\xc1\x83\x2a"
+					#string ext = ".uexp"
+					math uasset = 2
+				else
+				    #string ext = ".ubulk"
+					math uasset = 3
+				endif
+			endif
+		else 
+		    getarray coffset 0 0 
+			getarray czipsize 1 0
+			getarray csize 2 0
+			clog MEMORY_FILE5 coffset czipsize csize
+			math toc_file_chunk = -5
+			
+			
+			goto 0 toc_file_chunk
+			get magic_files long toc_file_chunk
+			#string ext = ""
+			callfunction guest_extension 1
+			
+			if uasset == 0
+				goto -0x4 toc_file_chunk
+				get magic_files threebyte toc_file_chunk
+				if magic_files == 0x2a83c1
+					#string ext = ".uexp"
+					math uasset = 2
+				else
+				    #string ext = ".ubulk"
+					math uasset = 3
+				endif
+			endif
+		endif
+        callfunction adder_ext 1
+		if chunks > 0
+			log name 0 0
+			append
+			for c = 0 <= chunks 
+				getarray coffset 0 c
+				getarray czipsize 1 c 
+				getarray csize 2 c 
+				clog name coffset czipsize csize
+			next c 
+			append
+		else
+			getarray coffset 0 chunks
+			getarray czipsize 1 chunks
+			getarray csize 2 chunks
+			clog name coffset czipsize csize
+		endif
+	next i
+	print "skipped compression: %skipped_filecount%"
+endfunction
+
+startfunction guest_extension 
+			if magic_files == 0x9e2a83c1
+				#string ext = ".uasset"
+				math uasset = 1
+			elif magic_files == 0x61754c1b
+				math uasset = 4
+			elif magic_files == 0x090a0d7b
+				math uasset = 5
+			elif magic_files == 0x007bfeff
+				math uasset = 5
+			elif magic_files == 0x200a0d7b
+				math uasset = 5
+			elif magic_files == 0x27da0020
+				math uasset = 6
+			elif magic_files == 0x00000001
+				math uasset = 6
+			elif magic_files == 0x7bbfbbef
+				math uasset = 6
+			elif magic_files == 0x44484b42
+			    math uasset = 8
+			endif
+endfunction
+startfunction adder_ext 
+		if uasset == 1
+		   string name += ".uasset"
+		elif uasset == 2
+			string name += ".uexp"
+		elif uasset == 4
+			string name += ".lua"
+		elif uasset == 3
+			string name += ".ubulk"
+		elif uasset == 5
+			string name += ".dat"
+		elif uasset == 6
+			string name += ".res"
+		elif uasset == 7
+			string name += ".bin"
+		elif uasset == 8
+		    string name += ".bnk"
+		endif
+endfunction
+
+startfunction getoffset 
+	findloc offset binary "\x28\xb5\x2f\xfd"
+	goto offset
+	idstring "\x28\xb5\x2f\xfd"
+	get encrypted byte
+	if encrypted == 0x63 
+	  math skipped_filecount += 1
+	  goto 5 0 SEEK_CUR
+	  continue skipped_file
+	endif
+	goto 0x4 0 SEEK_CUR
+	findloc newoffset binary "\x28\xb5\x2f\xfd"
+	xmath memoffset  "newoffset -1"
+	#goto memoffset # just for incase but we dont need it
+	#savepos memoffset
+endfunction
+
+startfunction getname
+	if runtimed <= folder_count
+		if runtimed == 1000 
+			math folder_count += 1000
+		endif 
+	else 
+		xmath parse "folder_count + 1000"
+		if runtimed == parse
+			math folder_count += 1000
+		endif
+	endif
+	
+	string name p "%08d" runtimed
+	#string name += . #for auto guest extension
+	#disable bcz we need to specify  the file
+endfunction
+
+
+
+
+startfunction getinfo 
+	savepos offset_compression
+	idstring "\x28\xb5\x2f\xfd" #header
+	
+	getbits dictionary_id_flag 2
+	getbits content_checksum_flag 1
+	getbits reserved_bit 1
+	getbits unused_bit 1
+	getbits single_segment_flag 1
+	getbits frame_content_size_flag 2
+	
+	if single_segment_flag == 0 
+		get windows_decriptor byte
+	endif
+	
+	
+	if Frame_Content_Size_flag == 0
+          if Single_Segment_flag == 0     # FCS_Field_Size 0
+              math size = 0
+          else                            # FCS_Field_Size 1
+              get size byte
+          endif
+      elif Frame_Content_Size_flag == 1   # FCS_Field_Size 2
+          get size short
+          math size + 256
+      elif Frame_Content_Size_flag == 2   # FCS_Field_Size 4
+          get size long
+      elif Frame_Content_Size_flag == 3   # FCS_Field_Size 8
+          get size longlong
+      endif
+	  
+	  do
+          getbits Last_Block 1
+          getbits Block_Type 2
+          getbits Block_Size 21
+          if Block_Type == 1  # RLE_Block
+              goto 1          0 SEEK_CUR
+          else
+              goto Block_Size 0 SEEK_CUR
+          endif
+          if content_checksum_flag != 0
+              get Content_Checksum long
+          endif
+      while Last_Block == 0
+	  
+	  savepos size_compression
+	  #math czipsize = size_compression 
+	  #math czipsize - offset_compression # this guest not working fine bcz there left some byte
+	  #if size_compression > memoffset 
+		#xmath czipsize "memoffset - offset_compression"
+	  #else
+		xmath czipsize "size_compression - offset_compression"
+	  #endif
+	  math coffset = offset_compression
+	  math csize = size 
+endfunction 
+
+
